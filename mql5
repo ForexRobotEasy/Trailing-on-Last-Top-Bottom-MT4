@@ -1,0 +1,89 @@
+
+//+------------------------------------------------------------------+
+//|                                                Trailing on Last Top Bottom MT4 |
+//|                                     https://www.forexroboteasy.com |
+//|                                          Developed by Forex Robot Easy Team |
+//+------------------------------------------------------------------+
+
+// Input parameters
+extern double TrailingDistance = 50; // Trailing distance in pips
+
+// Global variables
+double lastTop = 0; // Last recorded top price
+double lastBottom = 0; // Last recorded bottom price
+int ticket = 0; // Ticket number of the trade
+
+//+------------------------------------------------------------------+
+//| Custom indicator initialization function                         |
+//+------------------------------------------------------------------+
+int OnInit()
+{
+   return(INIT_SUCCEEDED);
+}
+
+//+------------------------------------------------------------------+
+//| Custom indicator iteration function                              |
+//+------------------------------------------------------------------+
+void OnTick()
+{
+   // Check if the last recorded top and bottom prices have been set
+   if(lastTop == 0 || lastBottom == 0)
+   {
+      // Get the current bid price
+      double currentBid = SymbolInfoDouble(_Symbol, SYMBOL_BID);
+
+      // Set the last recorded top and bottom prices
+      lastTop = currentBid;
+      lastBottom = currentBid;
+   }
+
+   // Check if there is an open trade
+   if(ticket != 0)
+   {
+      // Get the current ask price
+      double currentAsk = SymbolInfoDouble(_Symbol, SYMBOL_ASK);
+
+      // Calculate the trailing stop loss level
+      double trailingStopLoss = currentAsk - TrailingDistance * _Point;
+
+      // Modify the stop loss level of the open trade
+      OrderModify(ticket, 0, trailingStopLoss, OrderTakeProfit(), 0, CLR_NONE);
+   }
+}
+
+//+------------------------------------------------------------------+
+//| Open trade function                                              |
+//+------------------------------------------------------------------+
+void OpenTrade(double entryPrice)
+{
+   // Calculate the stop loss level
+   double stopLoss = entryPrice - TrailingDistance * _Point;
+
+   // Calculate the take profit level
+   double takeProfit = entryPrice + TrailingDistance * _Point;
+
+   // Open a buy trade
+   ticket = OrderSend(_Symbol, OP_BUY, 1, entryPrice, 3, stopLoss, takeProfit, 'Buy Order', 0, 0, Green);
+}
+
+//+------------------------------------------------------------------+
+//| Close trade function                                             |
+//+------------------------------------------------------------------+
+void CloseTrade()
+{
+   // Close the open trade
+   OrderClose(ticket, 1, SymbolInfoDouble(_Symbol, SYMBOL_BID), 0, clrNONE);
+   ticket = 0; // Reset the ticket number
+}
+
+//+------------------------------------------------------------------+
+//| Custom indicator deinitialization function                       |
+//+------------------------------------------------------------------+
+void OnDeinit(const int reason)
+{
+   // Close the open trade when the indicator is removed from the chart
+   if(ticket != 0)
+   {
+      CloseTrade();
+   }
+}
